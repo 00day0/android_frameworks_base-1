@@ -471,7 +471,7 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
         // lockscreen to QS.
         // We have to prevent the media container position from moving during the transition to have
         // a smooth translation animation without stuttering.
-        mView.setShouldMoveMediaOnExpansion(!isOnSplitShadeLockscreen);
+        mView.setShouldMoveMediaOnExpansion(false);
     }
 
     /** */

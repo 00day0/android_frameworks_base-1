@@ -102,7 +102,12 @@ public class QSPanel extends LinearLayout implements Tunable {
     private PageIndicator mFooterPageIndicator;
     private int mContentMarginStart;
     private int mContentMarginEnd;
-    private boolean mUsingHorizontalLayout;
+    private int mMaxColumnsLandscape;
+    private int mMaxColumnsPortrait;
+    private int mMaxColumnsMediaPlayer;
+    private int mMaxRowsPortrait;
+    protected boolean mUsingHorizontalLayout;
+    
 
     @Nullable
     private LinearLayout mHorizontalLinearLayout;
@@ -119,6 +124,9 @@ public class QSPanel extends LinearLayout implements Tunable {
     private boolean mUsingCombinedHeaders = false;
     private QSLogger mQsLogger;
 
+    private LinearLayout mTopQSControllLayout;
+    private LinearLayout mTopQSControllSubLayout;
+
     public QSPanel(Context context, AttributeSet attrs) {
         super(context, attrs);
         mUsingMediaPlayer = useQsMediaPlayer(context);
@@ -126,6 +134,10 @@ public class QSPanel extends LinearLayout implements Tunable {
                 R.dimen.quick_settings_bottom_margin_media);
         mMediaTopMargin = getResources().getDimensionPixelSize(
                 R.dimen.qs_tile_margin_vertical);
+        mMaxColumnsLandscape = getResources().getInteger(R.integer.quick_qs_panel_num_columns_landscape);
+        mMaxColumnsMediaPlayer = getResources().getInteger(R.integer.quick_qs_panel_num_columns_media);
+        mMaxColumnsPortrait = getResources().getInteger(R.integer.quick_settings_num_columns_custom);
+        mMaxRowsPortrait = getResources().getInteger(R.integer.quick_settings_max_rows_custom);
         mContext = context;
 
         setOrientation(VERTICAL);
@@ -185,6 +197,23 @@ public class QSPanel extends LinearLayout implements Tunable {
         mClippingRect.left = 0;
         mClippingRect.top = -1000;
         mHorizontalContentContainer.setClipBounds(mClippingRect);
+        updateColumns();
+    }
+
+    private void setupControllViews() {
+        if(mTopQSControllLayout==null | mTopQSControllSubLayout==null) {
+            mTopQSControllLayout = new LinearLayout(mContext);
+            mTopQSControllLayout.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+            mTopQSControllLayout.setOrientation(LinearLayout.HORIZONTAL);
+            mTopQSControllLayout.setPadding(0,0,0,getResources().getDimensionPixelSize(R.dimen.qs_controlls_padding_bottom));
+            addView(mTopQSControllLayout, 0);
+
+
+            mTopQSControllSubLayout = new LinearLayout(mContext);
+            mTopQSControllSubLayout.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, 1f));
+            mTopQSControllSubLayout.setOrientation(LinearLayout.HORIZONTAL);
+            mTopQSControllLayout.addView(mTopQSControllSubLayout);
+        }
     }
 
     /**
@@ -193,11 +222,15 @@ public class QSPanel extends LinearLayout implements Tunable {
      * Used to add the brightness slider after construction.
      */
     public void setBrightnessView(@NonNull View view) {
+        setupControllViews();
+        LinearLayout testView = new LinearLayout(mContext);
+        testView.setLayoutParams(new LinearLayout.LayoutParams(getResources().getDimensionPixelSize(R.dimen.qs_media_player_width), LayoutParams.WRAP_CONTENT));
+        addView(testView, 0);
         if (mBrightnessView != null) {
-            removeView(mBrightnessView);
+            mTopQSControllSubLayout.removeView(mBrightnessView);
             mMovableContentStartIndex--;
         }
-        addView(view, 0);
+        mTopQSControllSubLayout.addView(view);
         mBrightnessView = view;
         mAutoBrightnessView = view.findViewById(R.id.brightness_icon);
 
@@ -462,6 +495,12 @@ public class QSPanel extends LinearLayout implements Tunable {
         switchToParent((View) newLayout, parent, index);
         index++;
 
+        if (mBrightnessView != null) {
+            switchToParent(mBrightnessView, mTopQSControllSubLayout, 0);
+            switchToParent(mTopQSControllLayout, parent, 0);
+            index++;
+        }
+
         if (mFooter != null) {
             // Then the footer with the settings
             switchToParent(mFooter, parent, index);
@@ -478,6 +517,9 @@ public class QSPanel extends LinearLayout implements Tunable {
         if (!mUsingMediaPlayer) {
             return;
         }
+
+        setupControllViews();
+
         mMediaHostView = hostView;
         ViewGroup newParent = horizontal ? mHorizontalLinearLayout : this;
         ViewGroup currentParent = (ViewGroup) hostView.getParent();
@@ -487,11 +529,13 @@ public class QSPanel extends LinearLayout implements Tunable {
             if (currentParent != null) {
                 currentParent.removeView(hostView);
             }
-            newParent.addView(hostView);
+            if(mTopQSControllLayout!=null) {
+                mTopQSControllLayout.addView(hostView);
+            }
             LinearLayout.LayoutParams layoutParams = (LayoutParams) hostView.getLayoutParams();
             layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT;
-            layoutParams.width = horizontal ? 0 : ViewGroup.LayoutParams.MATCH_PARENT;
-            layoutParams.weight = horizontal ? 1f : 0;
+            layoutParams.width = 0;
+            layoutParams.weight = 1f;
             // Add any bottom margin, such that the total spacing is correct. This is only
             // necessary if the view isn't horizontal, since otherwise the padding is
             // carried in the parent of this view (to ensure correct vertical alignment)
@@ -627,6 +671,20 @@ public class QSPanel extends LinearLayout implements Tunable {
         }
     }
 
+    public void updateColumns() {
+    	final Resources res = mContext.getResources();
+        boolean isLandscape = res.getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+
+        int mColumnsMediaPlayer = mUsingHorizontalLayout ?
+            mMaxColumnsMediaPlayer :
+            mMaxColumnsLandscape;
+            
+        int mRowsMediaPlayer = mUsingHorizontalLayout ? 2 : 1;
+
+	mTileLayout.setMinRows(isLandscape ? mRowsMediaPlayer : mMaxRowsPortrait);
+        mTileLayout.setMaxColumns(isLandscape ? mColumnsMediaPlayer : mMaxColumnsPortrait);
+    }
+
     void setUsingHorizontalLayout(boolean horizontal, ViewGroup mediaHostView, boolean force) {
         if (horizontal != mUsingHorizontalLayout || force) {
             Log.d(getDumpableTag(), "setUsingHorizontalLayout: " + horizontal + ", " + force);
@@ -635,8 +693,7 @@ public class QSPanel extends LinearLayout implements Tunable {
             switchAllContentToParent(newParent, mTileLayout);
             reAttachMediaHost(mediaHostView, horizontal);
             if (needsDynamicRowsAndColumns()) {
-                mTileLayout.setMinRows(horizontal ? 2 : 1);
-                mTileLayout.setMaxColumns(horizontal ? 2 : 4);
+                updateColumns();
             }
             updateMargins(mediaHostView);
             mHorizontalLinearLayout.setVisibility(horizontal ? View.VISIBLE : View.GONE);

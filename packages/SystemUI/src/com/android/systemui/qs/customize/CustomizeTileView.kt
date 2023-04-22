@@ -18,6 +18,7 @@ package com.android.systemui.qs.customize
 
 import android.content.Context
 import android.text.TextUtils
+
 import com.android.systemui.plugins.qs.QSIconView
 import com.android.systemui.plugins.qs.QSTile
 import com.android.systemui.qs.tileimpl.QSTileViewImpl
@@ -41,7 +42,7 @@ class CustomizeTileView(
             field = value
             if (!showSideView) sideView.visibility = GONE
         }
-
+    
     override fun handleStateChanged(state: QSTile.State) {
         super.handleStateChanged(state)
         showRippleEffect = false
@@ -53,7 +54,7 @@ class CustomizeTileView(
         return if (showAppLabel && !TextUtils.isEmpty(text)) {
             VISIBLE
         } else {
-            GONE
+            INVISIBLE
         }
     }
 
