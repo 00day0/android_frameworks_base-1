@@ -124,6 +124,9 @@ public class QSPanel extends LinearLayout implements Tunable {
     private boolean mUsingCombinedHeaders = false;
     private QSLogger mQsLogger;
 
+    private LinearLayout mTopQSControllLayout;
+    private LinearLayout mTopQSControllSubLayout;
+
     public QSPanel(Context context, AttributeSet attrs) {
         super(context, attrs);
         mUsingMediaPlayer = useQsMediaPlayer(context);
@@ -150,6 +153,7 @@ public class QSPanel extends LinearLayout implements Tunable {
         mTileLayout = getOrCreateTileLayout();
 
         if (mUsingMediaPlayer) {
+            
             mHorizontalLinearLayout = new RemeasuringLinearLayout(mContext);
             mHorizontalLinearLayout.setOrientation(LinearLayout.HORIZONTAL);
             mHorizontalLinearLayout.setVisibility(
@@ -197,12 +201,27 @@ public class QSPanel extends LinearLayout implements Tunable {
         updateColumns();
     }
 
+    private void setupControllViews() {
+        mTopQSControllLayout = new LinearLayout(mContext);
+        mTopQSControllLayout.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        mTopQSControllLayout.setOrientation(LinearLayout.HORIZONTAL);
+        mTopQSControllLayout.setPadding(0,0,0,getResources().getDimensionPixelSize(R.dimen.qs_controlls_padding_bottom));
+        addView(mTopQSControllLayout, 0);
+        
+
+        mTopQSControllSubLayout = new LinearLayout(mContext);
+        mTopQSControllSubLayout.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, 1f));
+        mTopQSControllSubLayout.setOrientation(LinearLayout.HORIZONTAL);
+        mTopQSControllLayout.addView(mTopQSControllSubLayout);
+    }
+
     /**
      * Add brightness view above the tile layout.
      *
      * Used to add the brightness slider after construction.
      */
     public void setBrightnessView(@NonNull View view) {
+        mBrightnessView = view;
         if (mBrightnessView != null) {
             removeView(mBrightnessView);
             mMovableContentStartIndex--;
@@ -348,9 +367,9 @@ public class QSPanel extends LinearLayout implements Tunable {
     @Override
     public void onTuningChanged(String key, String newValue) {
         if (QS_SHOW_AUTO_BRIGHTNESS.equals(key) && mIsAutomaticBrightnessAvailable) {
-            updateViewVisibilityForTuningValue(mAutoBrightnessView, newValue);
+            //updateViewVisibilityForTuningValue(mAutoBrightnessView, newValue);
         } else if (QS_SHOW_BRIGHTNESS_SLIDER.equals(key) && mBrightnessView != null) {
-            updateViewVisibilityForTuningValue(mBrightnessView, newValue);
+            //updateViewVisibilityForTuningValue(mBrightnessView, newValue);
         }
     }
 
@@ -485,9 +504,18 @@ public class QSPanel extends LinearLayout implements Tunable {
 
     /** Call when orientation has changed and MediaHost needs to be adjusted. */
     private void reAttachMediaHost(ViewGroup hostView, boolean horizontal) {
+
         if (!mUsingMediaPlayer) {
             return;
         }
+
+        setupControllViews();
+        mTopQSControllLayout.removeView(mBrightnessView);
+        removeView(mBrightnessView);
+        //mTopQSControllSubLayout.addView(mBrightnessView,0);
+
+        
+
         mMediaHostView = hostView;
         ViewGroup newParent = horizontal ? mHorizontalLinearLayout : this;
         ViewGroup currentParent = (ViewGroup) hostView.getParent();
@@ -497,11 +525,14 @@ public class QSPanel extends LinearLayout implements Tunable {
             if (currentParent != null) {
                 currentParent.removeView(hostView);
             }
-            newParent.addView(hostView);
+            if(mTopQSControllLayout!=null) {
+                mTopQSControllLayout.addView(hostView);
+            }
+
             LinearLayout.LayoutParams layoutParams = (LayoutParams) hostView.getLayoutParams();
             layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT;
-            layoutParams.width = horizontal ? 0 : ViewGroup.LayoutParams.MATCH_PARENT;
-            layoutParams.weight = horizontal ? 1f : 0;
+            layoutParams.width = 0;
+            layoutParams.weight = 1f;
             // Add any bottom margin, such that the total spacing is correct. This is only
             // necessary if the view isn't horizontal, since otherwise the padding is
             // carried in the parent of this view (to ensure correct vertical alignment)

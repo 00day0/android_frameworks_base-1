@@ -19,4 +19,11 @@
     <!-- A11 QS style -->  
     <dimen name="custom_qs_panel_padding_top">24dp</dimen>
     <dimen name="custom_notification_row_padding">0dp</dimen>
+
+    <dimen name="qs_media_player_height">200dp</dimen>
+    <dimen name="qs_media_player_width">120dp</dimen>
+
+    <dimen name="qs_controlls_padding_bottom">24dp</dimen>
+
+    
 </resources>
